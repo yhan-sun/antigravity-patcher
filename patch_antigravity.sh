@@ -57,7 +57,7 @@ fi
 # Fallback to static offset patching if python3 is not available
 echo "⚠️ Python3 not found. Falling back to static version-specific patching..."
 
-OFFSET=$((0x1e9b508))
+OFFSET=$((0x1e9b510))
 # Check if already patched
 CURRENT_BYTE=$(xxd -p -s $OFFSET -l 4 "$BINARY" 2>/dev/null || echo "")
 if [ "$CURRENT_BYTE" = "3a000014" ]; then

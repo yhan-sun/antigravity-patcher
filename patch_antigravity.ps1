@@ -48,7 +48,7 @@ if ($pythonCmd) {
 # Fallback to static patching
 Write-Host "⚠️ Python not found. Falling back to static patching..." -ForegroundColor Yellow
 
-$offset = 0x1e9b508
+$offset = 0x1e9b510
 try {
     $bytes = [System.IO.File]::ReadAllBytes($binary)
     if ($bytes.Length -gt ($offset + 3)) {
@@ -68,7 +68,7 @@ if (-not (Test-Path $backup)) {
 }
 
 # Write static bytes
-$patchBytes = [byte[]]@(0x3A, 0x00, 0x00, 0x14)
+$patchBytes = [byte[]]@(0x38, 0x00, 0x00, 0x14)
 Write-Host "✏️ Writing static patch to offset 0x$($offset.ToString('X'))..." -ForegroundColor Cyan
 try {
     $fs = [System.IO.File]::OpenWrite($binary)

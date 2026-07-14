@@ -13,6 +13,13 @@ In newer versions of the interactive Antigravity CLI client (`agy`), a local **E
 
 This tool features an **instruction-level pattern matching engine** that scans the machine code of the `agy` binary to dynamically locate and bypass the local gate in `userInputLoop` without modifying any network configurations, allowing you to use local AI chat with any account.
 
+Therefore, **this patcher supports all past and future versions** of the `agy` CLI client dynamically.
+
+### 📊 Tested & Supported Versions
+<!-- BEGIN_SUPPORTED_VERSIONS -->
+1.1.2
+<!-- END_SUPPORTED_VERSIONS -->
+
 ---
 
 ## 🚀 Key Features
