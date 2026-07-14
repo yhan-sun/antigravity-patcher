@@ -1,0 +1,9 @@
+# Developer Scripts (Local Only)
+update_repo.py
+
+# Backups
+*.bak
+*.old
+*.backup
+*.repro
+.DS_Store
