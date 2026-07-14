@@ -41,22 +41,26 @@ def patch_binary(filepath):
         inst1, inst2, inst3, inst4, inst5 = struct.unpack('<5I', data[i:i+20])
         
         # Pattern 1: ldrb wA, [xB, #0x58] -> 0x39416000 | (B << 5) | A
-        if (inst1 & 0xfffc0000) != 0x39416000:
+        # Mask 0xfffffc00 retains opcode and imm12, clearing rn and rt
+        if (inst1 & 0xfffffc00) != 0x39416000:
             continue
         B = (inst1 >> 5) & 0x1f
         A = inst1 & 0x1f
         
         # Pattern 2: tbnz wA, #0, label1 -> 0x37000000 | (imm14 << 5) | A
-        if (inst2 & 0xffc0001f) != (0x37000000 | A):
+        # Mask 0xffe0001f retains opcode, bit number, and Rt
+        if (inst2 & 0xffe0001f) != (0x37000000 | A):
             continue
             
         # Pattern 3: ldr xC, [xB, #0x38] -> 0xf9401c00 | (B << 5) | C
-        if (inst4 & 0xfffc0000) != 0xf9401c00 or ((inst4 >> 5) & 0x1f) != B:
+        # Mask 0xfffffc00 retains opcode and imm12
+        if (inst4 & 0xfffffc00) != 0xf9401c00 or ((inst4 >> 5) & 0x1f) != B:
             continue
         C = inst4 & 0x1f
         
         # Pattern 4: cbz xC, label_send -> 0xb4000000 | (imm19 << 5) | C
-        if (inst5 & 0xffc0001f) != (0xb4000000 | C):
+        # Mask 0xffe0001f retains opcode and Rt
+        if (inst5 & 0xffe0001f) != (0xb4000000 | C):
             continue
             
         # Extract and sign-extend imm19 from cbz
@@ -77,11 +81,11 @@ def patch_binary(filepath):
         # If it was patched, inst5 would be b label_send
         for i in range(0, n - 20, 4):
             inst1, inst2, inst3, inst4, inst5 = struct.unpack('<5I', data[i:i+20])
-            if (inst1 & 0xfffc0000) == 0x39416000:
+            if (inst1 & 0xfffffc00) == 0x39416000:
                 B = (inst1 >> 5) & 0x1f
                 A = inst1 & 0x1f
-                if (inst2 & 0xffc0001f) == (0x37000000 | A):
-                    if (inst4 & 0xfffc0000) == 0xf9401c00 and ((inst4 >> 5) & 0x1f) == B:
+                if (inst2 & 0xffe0001f) == (0x37000000 | A):
+                    if (inst4 & 0xfffffc00) == 0xf9401c00 and ((inst4 >> 5) & 0x1f) == B:
                         C = inst4 & 0x1f
                         # If inst5 is already `b label_send` (0x14000000)
                         if (inst5 & 0xfc000000) == 0x14000000:
