@@ -1,47 +1,48 @@
 # Antigravity Patcher
 
+[中文说明 (Chinese Version)](README.zh-CN.md) | [![GitHub License](https://img.shields.io/github/license/yhan-sun/antigravity-patcher)](LICENSE)
+
 A simple utility script to patch the Antigravity CLI (`agy`) binary on macOS and Windows, enabling customization or fixing behavior such as disabling auto-updates.
 
-## Supported Platforms
-- **macOS**: Shell script (`patch_antigravity.sh`) with automatic binary search, binary modification, and ad-hoc code resign.
-- **Windows**: PowerShell script (`patch_antigravity.ps1`).
+## 💡 What is this?
+`Antigravity Patcher` is an automated tool designed to search for and patch the `agy` binary. It overwrites specific offset bytes (`0x1e9b508`) with custom values (`\x3a\x00\x00\x14`) to disable checks like auto-updates, and handles macOS codesigning issues so that the binary can run without warnings.
 
-## How it Works
-The script searches for the `agy` binary in default locations, backs up the original binary, writes patch bytes (`\x3a\x00\x00\x14`) to offset `0x1e9b508`, and (on macOS) re-signs the executable to ensure it can run on modern macOS systems.
+## 🚀 Why Use It?
+* ⚡ **One-line Execution**: Execute directly from GitHub without cloning or downloading manually.
+* 🔍 **Smart Search**: Autodetects paths for common installations (Homebrew, Local AppData, etc.).
+* 📦 **Automatic Backup**: Backs up your original executable to `.bak` automatically.
+* 🔏 **Ad-hoc Codesigning**: Re-signs modified macOS binaries on the fly.
 
 ---
 
-## Usage Instructions
+## 🛠️ Quick One-Liner Commands
 
 ### macOS / Linux
+```bash
+curl -fsSL https://raw.githubusercontent.com/yhan-sun/antigravity-patcher/main/patch_antigravity.sh | bash
+```
 
-1. Clone or download this repository.
-2. Grant execution permission to the script:
-   ```bash
-   chmod +x patch_antigravity.sh
-   ```
-3. Run the script:
-   ```bash
-   ./patch_antigravity.sh
-   ```
-4. If your binary is located in a custom directory, you can specify it as an argument:
-   ```bash
-   ./patch_antigravity.sh /path/to/your/agy
-   ```
-5. Once patched, run the CLI with the auto-update check disabled:
-   ```bash
-   AGY_CLI_DISABLE_AUTO_UPDATE=1 agy
-   ```
-
-### Windows
-
-1. Open PowerShell as Administrator.
-2. Run the PowerShell script:
-   ```powershell
-   .\patch_antigravity.ps1
-   ```
+### Windows (PowerShell)
+```powershell
+powershell -ExecutionPolicy Bypass -Command "iex (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/yhan-sun/antigravity-patcher/main/patch_antigravity.ps1')"
+```
 
 ---
 
-## Disclaimer
-This script modifies binary files. Please make sure you have backed up any critical data before running the patcher. Use at your own risk.
+## 🏃‍♀️ Running the Patched CLI
+After patching, run the `agy` client with the environment variable:
+
+```bash
+AGY_CLI_DISABLE_AUTO_UPDATE=1 agy
+```
+
+---
+
+## 📂 Backup & Rollback
+If you need to roll back, you can restore your binary from the backup file:
+```bash
+mv ~/.local/bin/agy.bak ~/.local/bin/agy  # Adjust path to match your installation
+```
+
+## ⚖️ Disclaimer
+This script modifies binary files. Use at your own risk. Always make sure your backup is secure.
