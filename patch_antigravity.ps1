@@ -1,84 +1,84 @@
-# patch_antigravity.ps1 - 自动查找并修补 Windows 上的 Antigravity CLI
-# 用法: 在 PowerShell 中运行 .\patch_antigravity.ps1
-# 需要管理员权限（用于签名操作）
+# patch_antigravity.ps1 - Universal patch script for Windows Antigravity CLI
+# Usage: .\patch_antigravity.ps1 [path\to\agy.exe]
 
-# 1. 查找 agy.exe
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+# 1. Locate binary
 $searchPaths = @(
     "$env:LOCALAPPDATA\agy\bin\agy.exe",
     "$env:USERPROFILE\AppData\Local\agy\bin\agy.exe"
 )
 
 $binary = $null
-foreach ($path in $searchPaths) {
-    if (Test-Path $path) {
-        $binary = $path
-        Write-Host "✅ 找到 agy: $binary" -ForegroundColor Green
-        break
+if ($args.Count -gt 0) {
+    $binary = $args[0]
+} else {
+    foreach ($path in $searchPaths) {
+        if (Test-Path $path) {
+            $binary = $path
+            Write-Host "✅ Found agy binary: $binary" -ForegroundColor Green
+            break
+        }
     }
 }
 
-# 如果没找到，尝试用 Get-Command 查找
 if (-not $binary) {
     $cmd = Get-Command agy.exe -ErrorAction SilentlyContinue
     if ($cmd) {
         $binary = $cmd.Source
-        Write-Host "✅ 通过 PATH 找到 agy: $binary" -ForegroundColor Green
+        Write-Host "✅ Found agy via PATH: $binary" -ForegroundColor Green
     }
 }
 
 if (-not $binary) {
-    Write-Host "❌ 错误: 未找到 agy.exe" -ForegroundColor Red
-    Write-Host "请确认 Antigravity CLI 已安装，或手动指定路径：" -ForegroundColor Yellow
+    Write-Host "❌ Error: Could not locate agy binary." -ForegroundColor Red
+    Write-Host "Please specify the path manually:" -ForegroundColor Yellow
     Write-Host "  .\patch_antigravity.ps1 -BinaryPath C:\path\to\agy.exe" -ForegroundColor Yellow
     exit 1
 }
 
-# 2. 检查是否已修补（偏移 0x1e9b508 处是否为 3A 00 00 14）
+# Try running python patcher first
+$pythonCmd = where.exe python 2>$null
+if ($pythonCmd) {
+    Write-Host "🔄 Running universal dynamic patcher via Python..." -ForegroundColor Cyan
+    & python "$scriptDir\patch_antigravity.py" "$binary"
+    exit $LASTEXITCODE
+}
+
+# Fallback to static patching
+Write-Host "⚠️ Python not found. Falling back to static patching..." -ForegroundColor Yellow
+
+$offset = 0x1e9b508
 try {
     $bytes = [System.IO.File]::ReadAllBytes($binary)
-    $offset = 0x1e9b508
     if ($bytes.Length -gt ($offset + 3)) {
         $current = $bytes[$offset..($offset+3)]
         if ($current[0] -eq 0x3A -and $current[1] -eq 0x00 -and $current[2] -eq 0x00 -and $current[3] -eq 0x14) {
-            Write-Host "ℹ️  检测到已修补，跳过。" -ForegroundColor Yellow
+            Write-Host "ℹ️ Binary is already patched (fallback check)." -ForegroundColor Yellow
             exit 0
         }
     }
-} catch {
-    # 读取失败则继续修补
-}
+} catch {}
 
-# 3. 备份原文件
+# Backup
 $backup = "$binary.bak"
 if (-not (Test-Path $backup)) {
-    Write-Host "📦 创建备份: $backup" -ForegroundColor Cyan
+    Write-Host "📦 Creating backup: $backup" -ForegroundColor Cyan
     Copy-Item $binary $backup
-} else {
-    Write-Host "📦 备份已存在: $backup" -ForegroundColor Cyan
 }
 
-# 4. 写入补丁字节
-# 偏移: 0x1e9b508，原指令 cbz x7, 0x101e9b5f0 -> 改为 b 0x101e9b5f0
-# 新指令编码: 0x1400003A (小端存储: 3A 00 00 14)
-$offset = 0x1e9b508
+# Write static bytes
 $patchBytes = [byte[]]@(0x3A, 0x00, 0x00, 0x14)
-
-Write-Host "✏️  写入补丁到偏移 0x$($offset.ToString('X')) ..." -ForegroundColor Cyan
-
+Write-Host "✏️ Writing static patch to offset 0x$($offset.ToString('X'))..." -ForegroundColor Cyan
 try {
     $fs = [System.IO.File]::OpenWrite($binary)
     $fs.Seek($offset, [System.IO.SeekOrigin]::Begin) | Out-Null
     $fs.Write($patchBytes, 0, $patchBytes.Length)
     $fs.Close()
-    Write-Host "✅ 补丁字节写入完成" -ForegroundColor Green
+    Write-Host "🎉 Fallback patch successful!" -ForegroundColor Green
+    Write-Host "Run with:" -ForegroundColor Yellow
+    Write-Host "   `$env:AGY_CLI_DISABLE_AUTO_UPDATE=1; & `"$binary`"" -ForegroundColor White
 } catch {
-    Write-Host "❌ 写入失败: $_" -ForegroundColor Red
-    Write-Host "请尝试以管理员身份运行 PowerShell" -ForegroundColor Yellow
+    Write-Host "❌ Write failed: $_" -ForegroundColor Red
     exit 1
 }
-
-# 5. Windows 不需要 codesign，直接完成
-Write-Host ""
-Write-Host "🎉 补丁成功！" -ForegroundColor Green
-Write-Host "运行以下命令启动（禁用自动更新）:" -ForegroundColor Yellow
-Write-Host "   `$env:AGY_CLI_DISABLE_AUTO_UPDATE=1; & `"$binary`"" -ForegroundColor White

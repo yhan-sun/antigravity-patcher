@@ -1,10 +1,13 @@
-#!/bin/bash
-# auto_patch_antigravity.sh - 自动查找并修补系统里的 Antigravity CLI
-# 用法: ./auto_patch_antigravity.sh
+#!/usr/bin/env bash
+# patch_antigravity.sh - Universal patch script for Antigravity CLI
+# Usage: ./patch_antigravity.sh [path/to/agy]
 
 set -e
 
-# 定义可能的安装路径（按优先级从高到低）
+# Resolve script directory to find sibling files
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Define possible installation paths (highest to lowest priority)
 SEARCH_PATHS=(
     "$HOME/.local/bin/agy"
     "$HOME/Library/Application Support/agy/bin/agy"
@@ -15,67 +18,71 @@ SEARCH_PATHS=(
 
 BINARY=""
 
-# 遍历查找
-for path in "${SEARCH_PATHS[@]}"; do
-    if [ -f "$path" ] && [ -x "$path" ]; then
-        BINARY="$path"
-        echo "✅ 找到 agy: $BINARY"
-        break
-    fi
-done
+# If path is provided as argument
+if [ -n "$1" ]; then
+    BINARY="$1"
+else
+    # Traverse default paths
+    for path in "${SEARCH_PATHS[@]}"; do
+        if [ -f "$path" ] && [ -x "$path" ]; then
+            BINARY="$path"
+            echo "✅ Found agy binary: $BINARY"
+            break
+        fi
+    done
+fi
 
-# 如果没找到，尝试用 which 命令
+# Fallback to which
 if [ -z "$BINARY" ]; then
     if command -v agy &> /dev/null; then
         BINARY=$(which agy)
-        echo "✅ 通过 PATH 找到 agy: $BINARY"
+        echo "✅ Found agy via PATH: $BINARY"
     fi
 fi
 
-# 仍然没找到则报错退出
 if [ -z "$BINARY" ]; then
-    echo "❌ 错误: 未找到 agy 二进制文件"
-    echo "请确认 Antigravity CLI 已安装，或手动指定路径："
-    echo "  ./auto_patch_antigravity.sh /path/to/agy"
+    echo "❌ Error: Could not locate agy binary."
+    echo "Please specify the path manually:"
+    echo "  ./patch_antigravity.sh /path/to/agy"
     exit 1
 fi
 
-# 检查是否已是修补版本（可选：通过校验和或字节比对）
-# 这里简单检查偏移 0x1e9b508 处是否已经是 3a 00 00 14
-CURRENT_BYTE=$(xxd -p -s 0x1e9b508 -l 4 "$BINARY" 2>/dev/null || echo "")
+# Run python patcher if available
+if command -v python3 &> /dev/null; then
+    echo "🔄 Running universal dynamic patcher via Python..."
+    python3 "$SCRIPT_DIR/patch_antigravity.py" "$BINARY"
+    exit $?
+fi
+
+# Fallback to static offset patching if python3 is not available
+echo "⚠️ Python3 not found. Falling back to static version-specific patching..."
+
+OFFSET=$((0x1e9b508))
+# Check if already patched
+CURRENT_BYTE=$(xxd -p -s $OFFSET -l 4 "$BINARY" 2>/dev/null || echo "")
 if [ "$CURRENT_BYTE" = "3a000014" ]; then
-    echo "ℹ️  检测到已修补，跳过。"
+    echo "ℹ️ Binary is already patched (fallback check)."
     exit 0
 fi
 
-# 备份原文件
+# Backup
 BACKUP="${BINARY}.bak"
 if [ ! -f "$BACKUP" ]; then
-    echo "📦 创建备份: $BACKUP"
+    echo "📦 Creating backup: $BACKUP"
     cp "$BINARY" "$BACKUP"
-else
-    echo "📦 备份已存在: $BACKUP"
 fi
 
-# 写入补丁字节
-OFFSET=$((0x1e9b508))
-echo "✏️  写入补丁到偏移 0x$(printf '%x' $OFFSET) ..."
+# Write static patch bytes (valid for 1.1.2 arm64 macOS)
+echo "✏️ Writing static patch to offset 0x$(printf '%x' $OFFSET)..."
 printf "\x3a\x00\x00\x14" | dd of="$BINARY" bs=1 seek=$OFFSET conv=notrunc status=none
-echo "✅ 补丁字节写入完成"
 
-# 重新签名
-echo "🔏 移除旧签名并重新签名 (ad-hoc) ..."
+# Re-sign
+echo "🔏 Re-signing binary..."
 codesign --remove-signature "$BINARY" 2>/dev/null || true
 codesign --sign - "$BINARY" || {
-    echo "⚠️  签名失败，请检查证书或尝试 sudo"
+    echo "⚠️ Codesigning failed."
     exit 1
 }
-echo "✅ 签名完成"
 
-# 验证签名
-echo "🔍 验证签名状态:"
-codesign -vvv "$BINARY" 2>&1 | head -3
-
-echo ""
-echo "🎉 补丁成功！运行以下命令启动（禁用自动更新）:"
+echo "🎉 Fallback patch successful! Run with:"
 echo "   AGY_CLI_DISABLE_AUTO_UPDATE=1 $BINARY"
