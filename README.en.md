@@ -72,5 +72,19 @@ If you need to roll back, simply restore your binary from the backup file:
 mv ~/.local/bin/agy.bak ~/.local/bin/agy
 ```
 
+---
+
+## 🔍 Common Errors & Search Keywords
+
+If you encounter any of the following error messages when running the Google Antigravity CLI, you can resolve them using this patcher:
+* `Eligibility check failed`
+* `Eligibility check failed: Your current account is not eligible for Antigravity. Verify your account to continue.`
+* `Alternatively, try signing in with another personal Google account.`
+* `Please verify your account in your browser to continue:`
+* `Account ineligible`
+* The interactive terminal CLI (TUI) blocks input or repeatedly prompts you to verify your account in the browser.
+
+---
+
 ## ⚖️ Disclaimer
 This script modifies binary files. Use at your own risk. Always make sure your backup is secure.

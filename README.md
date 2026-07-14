@@ -71,5 +71,19 @@ AGY_CLI_DISABLE_AUTO_UPDATE=1 agy
 mv ~/.local/bin/agy.bak ~/.local/bin/agy
 ```
 
+---
+
+## 🔍 常见报错与搜索关键词 (Common Error Messages)
+
+如果您在运行 Google Antigravity CLI 时遇到以下错误信息，即可使用本工具进行解决：
+* `Eligibility check failed`
+* `Eligibility check failed: Your current account is not eligible for Antigravity. Verify your account to continue.`
+* `Alternatively, try signing in with another personal Google account.`
+* `Please verify your account in your browser to continue:`
+* `Account ineligible`
+* 客户端在 TUI 交互界面中输入任意内容均被强制拦截，或不断提示需要浏览器验证。
+
+---
+
 ## ⚖️ 免责声明
 本工具仅用于学习与个人定制化开发环境。修改二进制文件存在一定风险，请在执行前确认已保存重要数据。
