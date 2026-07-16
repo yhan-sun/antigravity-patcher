@@ -15,20 +15,24 @@ This tool features an **instruction-level pattern matching engine** that scans t
 
 Therefore, **this patcher supports all past and future versions** of the `agy` CLI client dynamically.
 
-### 📊 Tested & Supported Versions
+### 📊 Tested & Supported Environments
 <!-- BEGIN_SUPPORTED_VERSIONS -->
-1.1.2
+* **Version**: 1.1.2
+* **OS & Architectures**:
+  * macOS (Apple Silicon M1/M2/M3 & Intel x86_64 architectures)
+  * Windows 10/11 (x64)
+  * Linux (x86_64, such as Ubuntu, Debian, CentOS, etc.)
 <!-- END_SUPPORTED_VERSIONS -->
 
 ---
 
 ## 🚀 Key Features
 
-* ⚡ **Universal Compatibility**: Dynamically parses binary instructions without relying on fixed offsets. It matches the pattern across past and future compilation versions.
+* ⚡ **Universal & Cross-platform**: Dynamically parses binary instructions without relying on fixed offsets. It matches the pattern across macOS (ARM64/x64), Windows (x64), and Linux (x64).
 * ⚡ **One-line Execution**: Run directly via terminal pipes without manual downloads or cloning.
 * 🔍 **Smart Search**: Autodetects paths for common installations (Homebrew, Local AppData, User Profiles, etc.).
 * 📦 **Automatic Backup**: Safely backs up the original executable to `.bak` before applying patches.
-* 🔏 **Ad-hoc Codesigning**: Automatically removes invalid signatures and signs modified macOS binaries on the fly to avoid system warnings.
+* 🔏 **Ad-hoc Codesigning**: Automatically signs modified macOS binaries on the fly to avoid system warnings.
 
 ---
 
@@ -36,13 +40,13 @@ Therefore, **this patcher supports all past and future versions** of the `agy` C
 
 You don't need to clone this repository. Copy and paste the corresponding command directly into your terminal:
 
-### 1. Dynamic Patcher (Recommended, macOS & Windows)
-If Python 3 is installed on your system (default on macOS), this will invoke the instruction-level scanner for **perfect version compatibility**:
+### 1. Dynamic Patcher (Recommended, macOS & Windows & Linux)
+If Python 3 is installed on your system, this will invoke the instruction-level scanner for **perfect version and cross-platform compatibility**:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yhan-sun/antigravity-patcher/main/patch_antigravity.py | python3
 ```
 
-### 2. Pure Shell Version (macOS Fallback)
+### 2. Pure Shell Version (macOS/Linux Fallback)
 If Python 3 is not available:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yhan-sun/antigravity-patcher/main/patch_antigravity.sh | bash

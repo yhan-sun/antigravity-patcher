@@ -15,19 +15,23 @@
 
 因此，**本工具能够完美兼容当前及未来的各种 `agy` 版本**。
 
-### 📊 已测试支持版本
+### 📊 已测试支持环境与版本
 <!-- BEGIN_SUPPORTED_VERSIONS -->
-1.1.2
+* **版本**: 1.1.2
+* **系统与架构**:
+  * macOS (Apple Silicon M1/M2/M3 及 Intel x86_64 架构)
+  * Windows 10/11 (x64)
+  * Linux (x86_64, 如 Ubuntu, Debian, CentOS 等)
 <!-- END_SUPPORTED_VERSIONS -->
 
 ---
 
 ## 🚀 核心功能
 
-* ⚡ **全版本通用**：通过扫描机器码特征，动态定位 `userInputLoop` 内部的逻辑跳转点，无需依赖固定版本的文件偏移量，完美适配新老版本。
+* ⚡ **全版本全平台通用**：通过扫描机器码特征，动态定位 `userInputLoop` 内部的逻辑跳转点，无需依赖固定版本的文件偏移量，完美适配 macOS (ARM64/x64)、Windows (x64)、Linux (x64)。
 * 🔍 **自动路径检测**：支持自动搜索系统中常见的 `agy` 安装目录（如 Homebrew、User Path、Application Support 等）。
 * 📦 **安全自动备份**：在写入补丁前自动生成原二进制的 `.bak` 备份文件，支持随时回滚。
-* 🔏 **智能代码重签名**：在 macOS 环境下，修补后会自动移除已失效的旧签名并对可执行文件进行 ad-hoc 签名，避免触发系统崩溃或安全警告。
+* 🔏 **智能代码重签名**：在 macOS 环境下，修补后会自动对可执行文件进行 ad-hoc 签名，避免触发系统安全警告。
 
 ---
 
@@ -35,13 +39,13 @@
 
 您无需下载或手动克隆仓库，直接复制以下对应的命令在您的终端中执行即可：
 
-### 1. 动态特征版（推荐，支持 macOS / Windows）
-如果您的系统中安装了 Python 3（macOS 通常自带），该脚本会启动指令级特征定位器，实现**全版本动态分析与完美适配**：
+### 1. 动态特征版（推荐，支持 macOS / Windows / Linux）
+如果您的系统中安装了 Python 3，该脚本会启动指令级特征定位器，实现**跨平台、全版本动态分析与完美适配**：
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yhan-sun/antigravity-patcher/main/patch_antigravity.py | python3
 ```
 
-### 2. 纯 Shell 脚本版（macOS 备用）
+### 2. 纯 Shell 脚本版（macOS/Linux 备用）
 若无 Python 环境，可以使用 Shell 脚本版（会尝试寻找 Python，找不到时 fallback 到特定版本静态字节修补）：
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yhan-sun/antigravity-patcher/main/patch_antigravity.sh | bash
