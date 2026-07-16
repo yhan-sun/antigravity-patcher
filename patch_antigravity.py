@@ -30,8 +30,29 @@ def find_binary():
 def scan_binary_for_pattern(data):
     """Scans binary data for the eligibility gate pattern and returns offset and patch bytes."""
     n = len(data)
-    for i in range(0, n - 20, 4):
-        inst1, inst2, inst3, inst4, inst5 = struct.unpack('<5I', data[i:i+20])
+
+    # 1. Scan for x86_64 PE/ELF (Windows/Linux/macOS Intel) pattern
+    # Pattern: cmpb $0x0, (%r12) -> 41 80 3c 24 00
+    #          jne offset32      -> 0f 85 XX XX XX XX
+    #          leaq rip_off, rax -> 48 8d 05 XX XX XX XX
+    #          mov $0x18, %ebx   -> bb 18 00 00 00
+    pe_pattern = b'\x41\x80\x3c\x24\x00\x0f\x85'
+    i = 0
+    while i < n - 25:
+        if data[i:i+7] == pe_pattern:
+            leaq_idx = i + 5 + 6
+            if data[leaq_idx:leaq_idx+3] == b'\x48\x8d\x05':
+                mov_idx = leaq_idx + 7
+                if data[mov_idx:mov_idx+2] == b'\xbb\x18':
+                    patch_offset = i + 5  # Points to the jne instruction: 0f 85 ...
+                    # Rewrite jne to 6 NOP bytes (0x90) so it falls through unconditionally
+                    new_inst_bytes = b'\x90' * 6
+                    return patch_offset, new_inst_bytes, True
+        i += 1
+
+    # 2. Scan for ARM64 eligibility gate pattern
+    for j in range(0, n - 20, 4):
+        inst1, inst2, inst3, inst4, inst5 = struct.unpack('<5I', data[j:j+20])
         
         # Pattern 1: ldrb wA, [xB, #0x58] -> 0x39416000 | (B << 5) | A
         if (inst1 & 0xfffffc00) != 0x39416000:
@@ -59,13 +80,13 @@ def scan_binary_for_pattern(data):
         else:
             imm19 = imm19_raw
             
-        patch_offset = i + 16
+        patch_offset = j + 16
         # Encode unconditional branch: b label_send (0x14000000 | (imm19 & 0x3ffffff))
         b_inst = 0x14000000 | (imm19 & 0x3ffffff)
         new_inst_bytes = struct.pack('<I', b_inst)
-        return patch_offset, new_inst_bytes
+        return patch_offset, new_inst_bytes, False
         
-    return None, None
+    return None, None, False
 
 def patch_binary(filepath):
     # If the file is already patched, try using the backup file to extract correct offsets
@@ -79,12 +100,11 @@ def patch_binary(filepath):
     with open(scan_filepath, 'rb') as f:
         data = bytearray(f.read())
         
-    patch_offset, new_inst_bytes = scan_binary_for_pattern(data)
+    patch_offset, new_inst_bytes, is_pe_x64 = scan_binary_for_pattern(data)
     
     if patch_offset is None:
-        # Check if active is already patched and no backup was found/scanned
+        # Check if active is already patched (ARM64)
         if scan_filepath == filepath:
-            # Check if active is already patched
             for i in range(0, len(data) - 20, 4):
                 inst1, inst2, inst3, inst4, inst5 = struct.unpack('<5I', data[i:i+20])
                 if (inst1 & 0xfffffc00) == 0x39416000:
@@ -92,10 +112,23 @@ def patch_binary(filepath):
                     A = inst1 & 0x1f
                     if (inst2 & 0xffe0001f) == (0x37000000 | A):
                         if (inst4 & 0xfffffc00) == 0xf9401c00 and ((inst4 >> 5) & 0x1f) == B:
-                            C = inst4 & 0x1f
                             if (inst5 & 0xfc000000) == 0x14000000:
                                 print("ℹ️ Binary is already patched.")
                                 return True
+                                
+            # Check if active is already patched (x86_64 PE/ELF)
+            pe_pattern = b'\x41\x80\x3c\x24\x00\x0f\x85'
+            check_idx = 0
+            while check_idx < len(data) - 25:
+                if data[check_idx:check_idx+7] == pe_pattern:
+                    leaq_idx = check_idx + 5 + 6
+                    if data[leaq_idx:leaq_idx+3] == b'\x48\x8d\x05':
+                        mov_idx = leaq_idx + 7
+                        if data[mov_idx:mov_idx+2] == b'\xbb\x18':
+                            if data[check_idx+5:check_idx+11] == b'\x90' * 6:
+                                print("ℹ️ Binary is already patched.")
+                                return True
+                check_idx += 1
                                 
         print("❌ Error: Pattern not found. This version of the CLI might not have the eligibility gate, or the structure has changed.")
         return False
@@ -105,8 +138,12 @@ def patch_binary(filepath):
         active_data = bytearray(f.read())
         
     # Check if active is already patched
-    active_inst5 = struct.unpack('<I', active_data[patch_offset:patch_offset+4])[0]
-    if active_inst5 == struct.unpack('<I', new_inst_bytes)[0]:
+    already_patched = False
+    patch_len = len(new_inst_bytes)
+    if active_data[patch_offset:patch_offset+patch_len] == new_inst_bytes:
+        already_patched = True
+        
+    if already_patched:
         print("ℹ️ Binary is already patched.")
     else:
         # Create backup if not exists
